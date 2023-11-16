@@ -17,8 +17,10 @@ import com.squareup.picasso.Picasso
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.File
+import java.io.FileOutputStream
 import java.io.FileReader
 import java.io.IOException
+import java.lang.Exception
 import java.lang.StringBuilder
 
 // TODO (1: Fix any bugs)
@@ -34,16 +36,22 @@ class MainActivity : AppCompatActivity() {
     lateinit var comicImageView: ImageView
 
 
-    private lateinit var preferences: SharedPreferences
-
     private var autoSave = false
 
     private val internalFilename = "my_file"
     private lateinit var file: File
 
+    override fun onStart() {
+        super.onStart()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+
+
+
 
         requestQueue = Volley.newRequestQueue(this)
 
@@ -53,17 +61,18 @@ class MainActivity : AppCompatActivity() {
         showButton = findViewById<Button>(R.id.showComicButton)
         comicImageView = findViewById<ImageView>(R.id.comicImageView)
 
-        // add a file object to save to
-        preferences = getPreferences(MODE_PRIVATE)
+        loadComic()
+
+
 
         // Create file reference for app-specific file
         file = File(filesDir, internalFilename)
 
-        // check is a comic was already loaded
-        autoSave = preferences.getBoolean(AUTO_SAVE_KEY, false)
+
 
         showButton.setOnClickListener {
             downloadComic(numberEditText.text.toString())
+
         }
 
     }
@@ -71,7 +80,8 @@ class MainActivity : AppCompatActivity() {
     private fun downloadComic (comicId: String) {
         val url = "https://xkcd.com/$comicId/info.0.json"
         requestQueue.add (
-            JsonObjectRequest(url, {showComic(it)}, {
+            JsonObjectRequest(url, {showComic(it)
+                                   saveComic(it)}, {
             })
         )
     }
@@ -82,9 +92,9 @@ class MainActivity : AppCompatActivity() {
         Picasso.get().load(comicObject.getString("img")).into(comicImageView)
     }
 
-    private fun saveComic() {
+    private fun loadComic() {
 
-        if (autoSave && file.exists()) {
+        if (file.exists()) {
             try {
                 val br = BufferedReader(FileReader(file))
                 val text = StringBuilder()
@@ -94,11 +104,26 @@ class MainActivity : AppCompatActivity() {
                     text.append('\n')
                 }
                 br.close()
-                textBox.setText(text.toString())
+                showComic(JSONObject(text.toString()))
+
             } catch (e: IOException) {
                 e.printStackTrace()
             }
         }
+    }
+
+    fun saveComic(comicObject: JSONObject) {
+
+
+
+            try {
+                val outputStream = FileOutputStream(file)
+                outputStream.write(comicObject.toString().toByteArray())
+                outputStream.close()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
     }
 
 
